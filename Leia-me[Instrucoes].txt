@@ -98,7 +98,7 @@ Universidade Federal da Fronteira Sul – UFFS
 Curso: Ciência da Computação
 Componente Curricular: Banco de Dados II
 Professor: Dr. Denio Duarte
-Alunos: Gustavo C. Favero e Glaucon
+Alunos: Gustavo C. Favero, Glaucon e Roseli
 
 Compilação:
 	$ gcc -Wall -c buffend.c
