@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include "buffend.h"
-#include "erros.h"
+#include "buffend.c"
 
 int menu();
 
@@ -83,7 +82,7 @@ int buscar_tabela(char tabela[], char busca[]){
 		}
 	}
 
-	//Verifica se encontru nome buscado
+	//Verifica se encontrou nome buscado
 	if(aux==0)
 		printf("'%s' não foi encontrado na tabela %s!\n",busca,tabela);
 	
@@ -132,7 +131,7 @@ int criar_tabela(char nomeTabela[], int tipo_tabela){
 	}
 
 	switch(tipo_tabela){
-
+		
 		case 1://Clientes
 			t = adicionaCampo(t, "Nome", 'S', 20);
 			t = adicionaCampo(t, "Idade", 'I', (sizeof(int)));
@@ -337,7 +336,6 @@ int menu(){
 	switch(opcao){
 		case 1:
 			consultar();
-			menu();
 		break;
 
 		case 2:
@@ -347,17 +345,52 @@ int menu(){
 			//~ tipo_tabela == 1 ? criar_tabela() : criar_tabelas_padrao();
 			criar_tabelas_padrao();
 			printf("\n");
-			menu();
 		break;
 		
 		case 3:
+			return 0;
 		break;
 	}
+	menu();
 
 	return 0;
 }
 
+//Criar tabela para pk e fks
+int criar_tabela_chaves(){
+	int erro;
+	table *t = NULL;
+
+	t = iniciaTabela("BD_Chaves");
+
+	if(t == ERRO_NOME_TABELA_INVALIDO){
+		printf("Erro: na função iniciaTabela(). Nome da tabela já existente.\n");
+		return 0;
+	}
+
+	t = adicionaCampo(t, "TabelaOrigem", 'S', 20);
+	t = adicionaCampo(t, "ID", 'I', (sizeof(int)));
+	t = adicionaCampo(t, "Tipo", 'C', (sizeof(char)));
+	t = adicionaCampo(t, "TabelaDestino", 'S', 20);
+	t = adicionaCampo(t, "CampoOrigem", 'S', 10);
+	t = adicionaCampo(t, "CampoDestino", 'S', 10);
+	erro = finalizaTabela(t);
+
+	if(erro != SUCCESS){
+		printf("Erro %d: na função finalizaTabela().\n", erro);
+		return 0;
+	}
+	
+	return 1;
+}
+
+void inicializacao(){
+	criar_tabela("BD_Chaves",5);
+}
+
 int main(){
+
+	inicializacao();
 
 	menu();
 
