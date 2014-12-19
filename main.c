@@ -97,13 +97,20 @@ int buscar_tabela(char tabela[], char busca[]){
 }
 
 int consultar(){
-	char tabela[TAMANHO_NOME_TABELA];
+	char *tabela=(char *)malloc(sizeof(char)*TAMANHO_NOME_TABELA);
 	char busca[20];
 
-	printf("\nDeseja consultar os dados de qual tabela? (Tabelas Padroes: Cliente, Funcionario, Produto, Cargo)\n");
+	printf("\(Tabelas Padroes: Cliente, Funcionario, Produto, Cargo)");
+	printf("\nDeseja consultar os dados de qual tabela?\n");
 	scanf("%s",tabela);
+
+	//Verifica se tabela existe no dicionário
+	if(!verificaNomeTabela(tabela)){
+		printf("A Tabela informada nao existe!\n");
+		return 0;
+	}
 	
-	printf("\nVoce selecionou Consultar!\nDigite o nome/descricao que deseja consultar:\n");
+	printf("\nVoce selecionou Consultar!\n(Consulte a documentacao parte 2 para ver possiveis buscas)\nDigite o nome/descricao que deseja consultar:\n");
 	scanf(" %s",busca);
 
 	printf("\nVoce esta buscando por %s em %s\n",busca,tabela);
@@ -337,9 +344,10 @@ int existe_arquivo(const char* nomeArquivo){
 
 int excluir_arquivo(char* nomeTabela){
 	char *nomeArquivo=(char *)malloc(sizeof(char)*TAMANHO_NOME_TABELA);
-	int i;
-    //~ struct fs_objects objeto;
 
+    struct fs_objects objeto;
+
+	//Concatela nome da tabela com .dat para verificar arquivo
 	strcpy(nomeArquivo,nomeTabela);
 	strcat(nomeArquivo,".dat");
 
@@ -356,48 +364,49 @@ int excluir_arquivo(char* nomeTabela){
 		printf("Tabela nao existente!\n");
 		return 0;
 	}
-	
-	//~ objeto = leObjeto(nomeTabela);
 
+	// Começa verificação no dicionário de dados para atualizá-lo sem a tabela que está sendo removida
 	FILE *dicionario;
 	char *tupla = (char *)malloc(sizeof(char)*TAMANHO_NOME_TABELA);
+
 	if((dicionario = fopen("fs_object.dat","a+b")) == NULL)
     	return ERRO_ABRIR_ARQUIVO;
 
-	//~ FILE *dicionario_novo;
-	//~ dicionario_novo = fopen("fs_object2.dat","wb");
+	// Inicia novo dicionário que substituirá o antigo
+	FILE *dicionario_novo;
+	if((dicionario_novo = fopen("fs_object2.dat","wb")) == NULL)
+    	return ERRO_ABRIR_ARQUIVO;
 
 	while(fgetc (dicionario) != EOF){
 		fseek(dicionario, -1, 1);
 
 		fread(tupla, sizeof(char), TAMANHO_NOME_TABELA, dicionario); //Lê somente o nome da tabela
 
-		if(strcmp(tupla, nomeTabela) == 0){ // Verifica se o nome dado pelo usuario existe no dicionario de dados.
-			fseek(dicionario, -TAMANHO_NOME_TABELA, 1); //Retorna para posição inicial da tabela
+		// Caso não seja a tabela a ser removida, escreve as informações no novo dicionário
+		if(strcmp(tupla, nomeTabela) != 0){ 
+			objeto = leObjeto(tupla);
 
-			//~ for(i=0;i<TAMANHO_NOME_TABELA+TAMANHO_NOME_ARQUIVO;i++){ // Enquanto estiver nas posiçoes da tabela
-				//~ printf("%c",fgetc (dicionario));
-				//~ fwrite("\0",1,1,dicionario_novo);
-			//~ }
-		}else{
-			fseek(dicionario, -TAMANHO_NOME_TABELA, 1);
-			for(i=0;i<TAMANHO_NOME_TABELA+TAMANHO_NOME_ARQUIVO;i++){ // Enquanto estiver nas posiçoes da tabela
-				//~ fwrite(fgetc (dicionario),1,1,dicionario_novo);
-			}
+			// Salva dados sobre a tabela no novo dicionario.
+			fwrite(&objeto.nome,sizeof(objeto.nome),1,dicionario_novo);
+			fwrite(&objeto.cod,sizeof(objeto.cod),1,dicionario_novo);
+			fwrite(&objeto.nArquivo,sizeof(objeto.nArquivo),1,dicionario_novo);
+			fwrite(&objeto.qtdCampos,sizeof(objeto.qtdCampos),1,dicionario_novo);
 		}
 		
         fseek(dicionario, 28, 1);
  	}
 
  	fclose(dicionario);
+ 	fclose(dicionario_novo);
+
+	//Sobrescreve o dicionário antigo pelo novo dicionário
+	system("mv fs_object2.dat fs_object.dat");
 
 	return 1;
 }
 
 void remover_tabela(){
 	char *nomeTabela=(char *)malloc(sizeof(char)*TAMANHO_NOME_TABELA);
-    //~ struct fs_objects objeto;
-	//~ int erro;
 	
 	printf("Digite o nome da tabela que deseja remover!\n");
 	scanf("%s",nomeTabela);
@@ -405,13 +414,15 @@ void remover_tabela(){
 	printf("\nRemovendo tabela %s...\n", nomeTabela);
 	
 	//Código para remoção
-	excluir_arquivo(nomeTabela);
+	if(excluir_arquivo(nomeTabela))
+		printf("Tabela %s removida com sucesso!\n",nomeTabela);
+	else
+		printf("Ocorreu um problema ao remover a tabela %s!\n",nomeTabela);
 }
 
 
 int menu(){
 	int opcao;
-	//~ int tipo_tabela;
 	
 	//Menu
 	printf("\nO que deseja fazer?\n");
@@ -419,11 +430,11 @@ int menu(){
 	scanf("%d",&opcao);
 
 	switch(opcao){
-		case 1:
+		case 1: // Consultas dados existentes nas tabelas criadas
 			consultar();
 		break;
 
-		case 2:
+		case 2: // Criar tabelas padrões (Cliente, Produto, Funcionario, Cargo)
 			//Descomentar quando criação dinamica de tabelas for implementado
 			//~ printf("1-Criar uma tabela especifica\n2-Criar tabelas pre-estabelecidas\n");
 			//~ scanf("%d",&tipo_tabela);
@@ -432,12 +443,16 @@ int menu(){
 			printf("\n");
 		break;
 
-		case 3:
+		case 3: // Remover tabelas
 			remover_tabela();
 		break;
 		
 		case 0:
 			return 0;
+		break;
+
+		default:
+			printf("Opcao invalida, verifique o menu e tente novamente!\n");
 		break;
 	}
 	menu();

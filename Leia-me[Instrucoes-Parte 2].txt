@@ -1,0 +1,45 @@
+Universidade Federal da Fronteira Sul – UFFS
+Curso: Ciência da Computação
+Componente Curricular: Banco de Dados II
+Professor: Dr. Denio Duarte
+Alunos: Gustavo C. Favero e Renan Rogoski
+
+Desenvolvimento SGBD Parte 2
+
+Compilação:
+	Pode-se ser compilado e executado pelo Geany normalmente.
+
+	Caso desejar executá-lo por linha de comando, faça o seguinte:
+		Abra arquivo "main.c" substitua #include "buffend.c" por #include "buffend.h" e #include "erros.h"
+	Após realizar estas modificações pode ser compilado da forma abaixo:
+		$ gcc -Wall -c buffend.c
+		$ gcc -Wall main.c buffend.o
+		$ ./a.out
+
+Funcionamento:
+
+	O sistema iniciará exibindo o menu, com a opção de criar tabelas e consultar dados.
+	
+	Opção '1 - Consultar tabelas':
+		Será solicitado o nome da tabela e do valor que deseja buscar.
+		Caso o valor digitado seja encontrado na tabela informada, o mesmo será exibido.
+		
+		Tabelas existentes caso criadas pela opção 2: Cliente, Funcionario, Produto, Cargo.
+		Dados que existem nas tabelas acimas para serem buscados: 
+			Tabela Cliente: (Joao, Maria, Pedro)
+			Tabela Funcionario: (Func1, Func2, Func3)
+			Tabela Produto: (Produto1, Produto2, Produto3)
+			Tabela Cargo: (Cargo1, Cargo2, Cargo3)
+
+	Opção '2 - Criar tabelas':
+		- Serão criadas as tabelas fixas do código, são elas: Cliente, Funcionario, Produto, Cargo
+		- Serão inseridos valores nas tabelas criadas acima.
+
+	Opção '3 - Remover tabela
+		- Será solicitado o nome da tabela que deseja remover.
+			Caso a tabela informada exista:
+			- Todos os dados da tabela serão removidos
+			- A tabela será removida do dicionário de dados
+			
+	Opção '0 - Sair':
+		Sair do sistema
