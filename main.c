@@ -361,8 +361,11 @@ int excluir_arquivo(char* nomeTabela){
 
 	FILE *dicionario;
 	char *tupla = (char *)malloc(sizeof(char)*TAMANHO_NOME_TABELA);
-	if((dicionario = fopen("fs_object.dat","rb")) == NULL)
+	if((dicionario = fopen("fs_object.dat","a+b")) == NULL)
     	return ERRO_ABRIR_ARQUIVO;
+
+	//~ FILE *dicionario_novo;
+	//~ dicionario_novo = fopen("fs_object2.dat","wb");
 
 	while(fgetc (dicionario) != EOF){
 		fseek(dicionario, -1, 1);
@@ -371,9 +374,15 @@ int excluir_arquivo(char* nomeTabela){
 
 		if(strcmp(tupla, nomeTabela) == 0){ // Verifica se o nome dado pelo usuario existe no dicionario de dados.
 			fseek(dicionario, -TAMANHO_NOME_TABELA, 1); //Retorna para posição inicial da tabela
-			for(i=0;i<TAMANHO_NOME_TABELA+TAMANHO_NOME_ARQUIVO;i++){ // Enquanto estiver nas posiçoes da tabela
+
+			//~ for(i=0;i<TAMANHO_NOME_TABELA+TAMANHO_NOME_ARQUIVO;i++){ // Enquanto estiver nas posiçoes da tabela
 				//~ printf("%c",fgetc (dicionario));
-				fwrite("\0",1,1,dicionario);
+				//~ fwrite("\0",1,1,dicionario_novo);
+			//~ }
+		}else{
+			fseek(dicionario, -TAMANHO_NOME_TABELA, 1);
+			for(i=0;i<TAMANHO_NOME_TABELA+TAMANHO_NOME_ARQUIVO;i++){ // Enquanto estiver nas posiçoes da tabela
+				//~ fwrite(fgetc (dicionario),1,1,dicionario_novo);
 			}
 		}
 		
