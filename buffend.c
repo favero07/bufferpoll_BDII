@@ -281,7 +281,6 @@ int verificaNomeTabela(char *nomeTabela)
         fread(tupla, sizeof(char), TAMANHO_NOME_TABELA, dicionario); //Lê somente o nome da tabela
 
         if(strcmp(tupla, nomeTabela) == 0){ // Verifica se o nome dado pelo usuario existe no dicionario de dados.
-      		
         	return 1;
         }
         
@@ -491,19 +490,251 @@ column *insereValor(column *c, char *nomeCampo, char *valorCampo)
 
 	return ERRO_INSERIR_VALOR;
 }
+
+// Verifica se o arquivo existe
+// Retorna 1 se existir e 0 se não existir
+int existe_arquivo(const char* nomeArquivo){
+	FILE* arquivo = fopen(nomeArquivo, "r"); 
+	if(arquivo!=NULL){
+		fclose(arquivo);
+		
+		return 1;
+	}
+	return 0;
+}
+
+//Procura se valor da busca existe na tabela
+//Retorna 1 se encontrar e 0 se não encontrar
+int TabelaPossuiPk(char tabela[]){
+	int erro;
+	
+	struct fs_objects objeto = leObjeto("BD_Chaves");
+
+	tp_table *esquema = leSchema(objeto);
+
+	if(esquema == ERRO_ABRIR_ESQUEMA){
+		printf("Erro ao criar o esquema.\n");
+		return 0;
+	}
+
+	tp_buffer *bufferpoll = initbuffer();
+
+	if(bufferpoll == ERRO_DE_ALOCACAO){
+		printf("Erro ao alocar memória para o buffer.\n");
+		return 0;
+	}
+
+	erro = colocaTuplaBuffer(bufferpoll, 0, esquema, objeto);
+
+	if(erro != SUCCESS){
+		printf("Erro %d: na função colocaTuplaBuffer().\n", erro);
+		return 0;
+	}
+	
+	erro = colocaTuplaBuffer(bufferpoll, 1, esquema, objeto);
+
+	if(erro != SUCCESS){
+		printf("Erro %d: na função colocaTuplaBuffer().\n", erro);
+		return 0;
+	}
+	
+	erro = colocaTuplaBuffer(bufferpoll, 2, esquema, objeto);
+
+	if(erro != SUCCESS){
+		printf("Erro %d: na função colocaTuplaBuffer().\n", erro);
+		return 0;
+	}
+
+	column *pagina = getPage(bufferpoll, esquema, objeto, 0);
+
+	if(pagina == ERRO_PARAMETRO){
+		printf("Erro, na função getPage(), problemas no parametro.\n");
+		return 0;
+	}
+
+	// Auxiliar dos dados da tupla buscada
+	int j, y = 0;
+
+	for(j=0; j < objeto.qtdCampos*bufferpoll[0].nrec; j++){
+		if(strcmp(pagina[j].valorCampo,tabela) == 0){
+			for(y=j;y<j+objeto.qtdCampos;y++){
+				if (strcmp (pagina[y].nomeCampo, "Tipo") == 0){
+					if (strcmp (pagina[y].valorCampo, "P") == 0)
+						return 1; // Encontrou a tupla, retorna 1
+				}
+			}
+		}
+	}
+
+	return 0; // Nao encontrou a tupla, retorna 0
+}
+
+int campo_existe_na_tabela(char tabela[],char campo[]){
+	int erro;
+	
+	struct fs_objects objeto = leObjeto(tabela);
+
+	tp_table *esquema = leSchema(objeto);
+
+	if(esquema == ERRO_ABRIR_ESQUEMA){
+		printf("Erro ao criar o esquema.\n");
+		return 0;
+	}
+
+	tp_buffer *bufferpoll = initbuffer();
+
+	if(bufferpoll == ERRO_DE_ALOCACAO){
+		printf("Erro ao alocar memória para o buffer.\n");
+		return 0;
+	}
+
+	erro = colocaTuplaBuffer(bufferpoll, 0, esquema, objeto);
+
+	if(erro != SUCCESS){
+		printf("Erro %d: na função colocaTuplaBuffer().\n", erro);
+		return 0;
+	}
+	
+	erro = colocaTuplaBuffer(bufferpoll, 1, esquema, objeto);
+
+	if(erro != SUCCESS){
+		printf("Erro %d: na função colocaTuplaBuffer().\n", erro);
+		return 0;
+	}
+	
+	erro = colocaTuplaBuffer(bufferpoll, 2, esquema, objeto);
+
+	if(erro != SUCCESS){
+		printf("Erro %d: na função colocaTuplaBuffer().\n", erro);
+		return 0;
+	}
+
+	column *pagina = getPage(bufferpoll, esquema, objeto, 0);
+
+	if(pagina == ERRO_PARAMETRO){
+		printf("Erro, na função getPage(), problemas no parametro.\n");
+		return 0;
+	}
+
+	// Auxiliar dos dados da tupla buscada
+	int j, y = 0;
+
+	for(j=0; j < objeto.qtdCampos*bufferpoll[0].nrec; j++){
+		if(strcmp(pagina[j].nomeCampo,tabela) == 0){
+			for(y=j;y<j+objeto.qtdCampos;y++){
+				if (strcmp (pagina[y].nomeCampo, campo) == 0)
+					return 1; // Encontrou a coluna(campo), retorna 1
+			}
+		}
+	}
+
+	return 0; // Nao encontrou a coluna, retorna 0
+}
+
 int finalizaInsert(char *nome, column *c)
 {
 	column *auxC;
 	int i = 0, x = 0, t;
 	FILE *dados;
 
+	if(!verificaNomeTabela(nome)){
+		printf("\nA Tabela informada nao existe!\n");
+		return 0;
+	}
 
 	struct fs_objects dicio = leObjeto(nome); // Le dicionario
 	tp_table *auxT = leSchema(dicio); // Le esquema
-	
+
+	//se estiver inserindo na tabela de chaves, verifica regras de PK e FK
+	if (strcmp (nome, "BD_Chaves") == 0){
+		column *auxP;
+		char *tabela_fk=(char *)malloc(sizeof(char)*TAMANHO_NOME_TABELA);
+		char *campo_fk=(char *)malloc(sizeof(char)*TAMANHO_NOME_TABELA);
+		int p, fk;
+		
+		if(existe_arquivo("BD_Chaves.dat")){
+			int pk;
+			for(auxP = c, p = 0; auxP != NULL; auxP = auxP->next, p++)
+			{
+				if(p >= dicio.qtdCampos)
+					p = 0;
+
+				if (pk != 1 && auxT[p].tipo == 'C'){
+					//Se está tentando inserir PK, seta pk = 1 para verificar posteriormente se já existe PK 
+					if (strcmp (auxP->valorCampo, "P") == 0){
+						pk = 1;
+						p=0;
+						auxP = c;
+					}
+				}
+
+				//Caso esteja inserindo PK, verifica se tabela já possui PK
+				if (pk == 1 && strcmp (auxP->nomeCampo, "TabelaOrigem") == 0){
+					printf("\nInserindo chave na tabela %s",auxP->valorCampo);
+					if(TabelaPossuiPk(auxP->valorCampo))
+						return ERRO_VIOLACAO_PK;
+				}
+				
+				if (fk != 1 && auxT[p].tipo == 'C'){
+					//Se está tentando inserir FK, seta Fk = 1 para verificar posteriormente se tabela da FK existe 
+					if (strcmp (auxP->valorCampo, "F") == 0){
+						fk = 1;
+						p=0;
+						auxP = c;
+					}
+				}
+
+				//Caso esteja inserindo FK, verifica se tabela da FK existe
+				if (fk == 1 && strcmp (auxP->nomeCampo, "TabelaDestino") == 0 && tabela_fk == NULL)
+					strcpy(tabela_fk, auxP->valorCampo);
+
+				if (fk == 1 && strcmp (auxP->nomeCampo, "CampoDestino") == 0 && campo_fk == NULL)
+					strcpy(campo_fk, auxP->valorCampo);
+			}
+		}else{
+			for(auxP = c, p = 0; auxP != NULL; auxP = auxP->next, p++)
+			{
+				if(p >= dicio.qtdCampos)
+					p = 0;
+
+				if (fk != 1 && auxT[p].tipo == 'C'){
+					//Se está tentando inserir FK, seta Fk = 1 para verificar posteriormente se tabela da FK existe 
+					if (strcmp (auxP->valorCampo, "F") == 0){
+						fk = 1;
+						p=0;
+						auxP = c;
+					}
+				}
+
+				//Caso esteja inserindo FK, verifica se tabela da FK existe
+				if (fk == 1 && strcmp (auxP->nomeCampo, "TabelaDestino") == 0 && strcmp(tabela_fk, "\0") == 0)
+					strcpy(tabela_fk, auxP->valorCampo);
+
+				if (fk == 1 && strcmp (auxP->nomeCampo, "CampoDestino") == 0 && strcmp(campo_fk, "\0") == 0)
+					strcpy(campo_fk, auxP->valorCampo);
+			}
+		}
+		// Verifica se tabela destino da FK existe e se campo destino da Fk existe na tabela destino
+		if(strcmp(tabela_fk, "\0") != 0 && strcmp(campo_fk, "\0") != 0){
+			//Verifica se tabela destino da fk existe
+			if(!verificaNomeTabela(tabela_fk)){
+				printf("Erro: Tabela Destino da FK nao existe!\n");
+				return 0;
+			}
+
+			// Verifica se campo da fk existe na tabela destino da fk
+			if(campo_existe_na_tabela(tabela_fk,campo_fk) == 0){
+				printf("Campo %s nao existe na tabela %s!\n",campo_fk, tabela_fk);
+				return 0;
+			}
+		}
+	}
+
 	if((dados = fopen(dicio.nArquivo,"a+b")) == NULL)
     	return ERRO_ABRIR_ARQUIVO;
-	
+
+    char *tabela_origem=(char *)malloc(sizeof(char)*TAMANHO_NOME_TABELA);
+
 	for(auxC = c, t = 0; auxC != NULL; auxC = auxC->next, t++)
 	{
 		if(t >= dicio.qtdCampos)
@@ -554,7 +785,17 @@ int finalizaInsert(char *nome, column *c)
 				return ERRO_NO_TIPO_CHAR;
 			}
 			char valorChar = auxC->valorCampo[0];
-			fwrite(&valorChar,sizeof(valorChar),1,dados);			
+			fwrite(&valorChar,sizeof(valorChar),1,dados);
+		}
+
+		//Caso tenha criado chaves
+		if (strcmp (auxC->nomeCampo, "TabelaOrigem") == 0)
+			strcpy(tabela_origem, auxC->valorCampo);
+		if (strcmp (auxC->nomeCampo, "TabelaDestino") == 0){
+			if (strcmp (auxC->valorCampo, "\0") == 0)
+				printf("\nChave primaria criada na tabela %s",tabela_origem);
+			else
+				printf("\nChave estrangeira criada na tabela %s",tabela_origem);
 		}
 
 	}
